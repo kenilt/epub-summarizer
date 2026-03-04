@@ -33,7 +33,7 @@ from tqdm import tqdm
 # ─────────────────────────────────────────────
 # Cấu hình mặc định
 # ─────────────────────────────────────────────
-DEFAULT_MODEL = "qwen3:4b"
+DEFAULT_MODEL = "gemma3:4b"
 DEFAULT_RATIO = 0.10  # Rút gọn còn 10% bản gốc
 OLLAMA_URL = "http://localhost:11434/api/generate"
 CONTEXT_KEEP = 3  # Số chương gần nhất giữ lại làm context
@@ -330,7 +330,7 @@ p  { margin: 0.8em 0; text-align: justify; }
         uid="style",
         file_name="style/main.css",
         media_type="text/css",
-        content=css_content,
+        content=css_content.encode("utf-8"),
     )
     new_book.add_item(css_item)
 
@@ -361,9 +361,10 @@ p  { margin: 0.8em 0; text-align: justify; }
         epub_ch = epub.EpubHtml(
             title=ch.title,
             file_name=file_name,
-            content=html_content,
             lang="vi",
         )
+        epub_ch.content = html_content.encode("utf-8")
+
         epub_ch.add_item(css_item)
         new_book.add_item(epub_ch)
         spine.append(epub_ch)
