@@ -34,9 +34,9 @@ from tqdm import tqdm
 # Cấu hình mặc định
 # ─────────────────────────────────────────────
 DEFAULT_MODEL = "gemma3:4b"
-DEFAULT_RATIO = 0.10  # Rút gọn còn 10% bản gốc
+DEFAULT_RATIO = 0.20  # Rút gọn còn 20% bản gốc
 OLLAMA_URL = "http://localhost:11434/api/generate"
-CONTEXT_KEEP = 3  # Số chương gần nhất giữ lại làm context
+CONTEXT_KEEP = 0  # Số chương gần nhất giữ lại làm context
 MAX_CONTEXT_WORDS = 600  # Giới hạn context (words) gửi kèm mỗi lần
 RETRY_LIMIT = 3  # Số lần thử lại nếu Ollama lỗi
 RETRY_DELAY = 5  # Giây chờ giữa các lần retry
@@ -142,7 +142,7 @@ def build_prompt(
     chunk_info: str = "",
 ) -> str:
     lang_instruction = {
-        "vi": "Hãy tóm tắt bằng tiếng Việt.",
+        "vi": "Hãy rút gọn truyện bằng tiếng Việt.",
         "en": "Please summarize in English.",
         "auto": "Summarize in the same language as the chapter text.",
     }.get(language, "Summarize in the same language as the chapter text.")
@@ -156,23 +156,32 @@ def build_prompt(
 
     chunk_note = f"\n({chunk_info})" if chunk_info else ""
 
-    return f"""Bạn là trợ lý tóm tắt tiểu thuyết chuyên nghiệp. {lang_instruction}
+    prompt = f"""\
+Bạn là một nhà văn chuyên biên tập và chuyển thể tiểu thuyết tiên hiệp. Nhiệm vụ của bạn là viết lại một chương truyện dài thành một phiên bản tinh gọn nhưng vẫn giữ được phong thái, nhịp điệu và cảm xúc của một chương truyện đầy đủ.
 
-{context_block}CHƯƠNG CẦN TÓM TẮT: {chapter_title}{chunk_note}
-ĐỘ DÀI GỐC: {original_word_count} từ
-MỤC TIÊU TÓM TẮT: khoảng {target_words} từ
+{context_block}CHƯƠNG CẦN XỬ LÝ: {chapter_title}{chunk_note}
+Độ dài yêu cầu: Bắt buộc nằm trong khoảng {int(target_words * 4.5 * 0.7)}-{int(target_words * 4.5 * 1.3)} ký tự. (Đây là yêu cầu nghiêm ngặt, không được viết dưới {int(target_words * 4.5 * 0.7)} ký tự).
 
-QUY TẮC QUAN TRỌNG:
-1. Chỉ trả về nội dung tóm tắt, KHÔNG thêm tiêu đề, KHÔNG thêm ghi chú.
-2. Giữ lại: tên nhân vật, địa điểm, sự kiện quan trọng, tình tiết then chốt.
-3. Lược bỏ: mô tả dài dòng, đối thoại lặp lại, chi tiết không ảnh hưởng cốt truyện.
-4. Đảm bảo tóm tắt liền mạch, dễ hiểu cho người chưa đọc chương gốc.
-5. Độ dài tối đa: {int(target_words * 1.3)} từ.
+CẤU TRÚC VÀ PHONG CÁCH:
+1. Văn phong: Viết dưới dạng chương truyện hoàn chỉnh, có dẫn dắt, có lời thoại và miêu tả tâm lý. Tuyệt đối không viết theo kiểu liệt kê sự kiện hay tóm tắt mục lục.
+2. Giữ lại linh hồn: Phải có đủ các nhân vật, sự kiện then chốt và đặc biệt là cảm xúc của nhân vật chính trong cao trào.
+3. Kỹ thuật tinh gọn:
+  * Thay vì miêu tả chiêu thức 10 dòng, hãy dùng 1-2 câu súc tích nhưng đầy uy lực.
+  * Lược bỏ các đoạn hội thoại sáo rỗng, chỉ giữ lại những câu thoại mang tính quyết định hoặc thể hiện thần thái nhân vật.
+  * Biến các đoạn nội tâm dài dòng thành những suy nghĩ sắc bén, gãy gọn.
+4. Nhịp độ: Đẩy nhanh tốc độ diễn tiến nhưng vẫn phải có những khoảng lặng cảm xúc để người đọc không cảm thấy bị "ngộp" thông tin.
+
+QUY TẮC CẤM:
+- Không thêm tình tiết mới ngoài bản gốc.
+- Không ghi chú "Dưới đây là bản rút gọn...", không tiêu đề, không lời dẫn. Chỉ trả về nội dung chương truyện.
+- Không sử dụng các cụm từ tóm tắt như "Tóm lại...", "Chương này kể về...".
 
 NỘI DUNG CHƯƠNG:
 {chapter_text}
 
 TÓM TẮT:"""
+    print(prompt[:5000] + "\n...")  # In phần đầu prompt để debug
+    return prompt
 
 
 def summarize_chapter(
